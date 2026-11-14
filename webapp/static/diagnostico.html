@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Diagnóstico Digital Gratis — Aconcagua Agency Colombia</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <nav class="nav">
+    <div class="brand">
+      <span>⛰️ Aconcagua Agency</span>
+      <span class="badge">Diagnóstico</span>
+    </div>
+    <div class="nav-links">
+      <a href="/">Inicio</a>
+      <a href="/diagnostico" class="active">Diagnóstico Gratis</a>
+      <a href="/admin">Panel Representante</a>
+    </div>
+  </nav>
+
+  <main class="container" style="max-width: 760px;">
+    <div class="card">
+      <span class="badge">Evaluación Express · 2 minutos</span>
+      <h1 style="font-size: 2rem;">Descubre qué frena tus ventas digitales hoy</h1>
+      <p class="muted">Responde 4 preguntas y obtén al instante la hoja de ruta recomendada por Aconcagua Agency Colombia.</p>
+
+      <form id="diag-form">
+        <label for="d-industry">1. Industria o tipo de negocio *</label>
+        <input id="d-industry" required placeholder="Ej. E-commerce moda, Clínica estética, Inmobiliaria, SaaS..." />
+
+        <label for="d-goal">2. Objetivo principal en los próximos 90 días *</label>
+        <select id="d-goal">
+          <option value="Escalar ventas y leads con pauta (ROAS)">Escalar ventas y clientes con anuncios (Meta/Google/TikTok)</option>
+          <option value="Posicionamiento de marca con creadores UGC">Posicionamiento y confianza con creadores e influencers (UGC)</option>
+          <option value="Aparecer primero en Google y buscadores IA">Aparecer primero en Google (SEO) y buscadores IA</option>
+        </select>
+
+        <label for="d-channel">3. Canal que más usan hoy</label>
+        <select id="d-channel">
+          <option value="Instagram y WhatsApp">Instagram + WhatsApp</option>
+          <option value="Meta Ads / Google Ads">Ya invertimos en Meta Ads o Google Ads</option>
+          <option value="Solo referidos / sin pauta">Solo referidos, aún sin sistema digital</option>
+        </select>
+
+        <label for="d-challenge">4. Mayor cuello de botella actual</label>
+        <select id="d-challenge">
+          <option value="Costo por lead alto o pocas ventas en ads">Invertimos en anuncios pero no vemos retorno claro</option>
+          <option value="Falta de contenido y creativos UGC">Nos faltan videos/creativos que de verdad vendan</option>
+          <option value="Web lenta o sin conversión">La gente llega pero no compra ni escribe (web/embudo)</option>
+        </select>
+
+        <label for="d-budget">Presupuesto mensual aproximado en marketing</label>
+        <select id="d-budget">
+          <option value="$1.5M - $4M COP / mes">$1.5M – $4M COP / mes</option>
+          <option value="$4M - $10M COP / mes">$4M – $10M COP / mes</option>
+          <option value="Más de $10M COP / mes">Más de $10M COP / mes</option>
+          <option value="Por definir">Aún por definir</option>
+        </select>
+
+        <hr style="border-color: var(--border); margin: 18px 0;" />
+
+        <label for="d-name">Tu nombre *</label>
+        <input id="d-name" required placeholder="Nombre completo" />
+
+        <label for="d-company">Nombre de tu empresa *</label>
+        <input id="d-company" required placeholder="Empresa o marca" />
+
+        <label for="d-email">Correo para enviarte el diagnóstico *</label>
+        <input id="d-email" type="email" required placeholder="nombre@empresa.com" />
+
+        <label for="d-whatsapp">WhatsApp (+57...)</label>
+        <input id="d-whatsapp" placeholder="+57 300 000 0000" />
+
+        <button type="submit" class="btn" style="width:100%;">Ver mi Diagnóstico Recomendado</button>
+      </form>
+
+      <div id="diag-result" class="notice hidden" style="margin-top:18px;"></div>
+      <div id="diag-actions" class="btn-row hidden" style="margin-top:12px;">
+        <a id="diag-wa" href="#" target="_blank" rel="noopener" class="btn btn-amber">Hablar ahora por WhatsApp Colombia</a>
+        <a href="/" class="btn btn-secondary">Volver al inicio</a>
+      </div>
+    </div>
+  </main>
+
+  <script src="/static/common.js"></script>
+  <script>
+    document.getElementById("diag-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const resEl = document.getElementById("diag-result");
+      const actEl = document.getElementById("diag-actions");
+      try {
+        const res = await apiJson("/api/diagnostico/submit", {
+          method: "POST",
+          body: {
+            industry: document.getElementById("d-industry").value,
+            goal: document.getElementById("d-goal").value,
+            current_channel: document.getElementById("d-channel").value,
+            challenge: document.getElementById("d-challenge").value,
+            monthly_budget: document.getElementById("d-budget").value,
+            name: document.getElementById("d-name").value,
+            company: document.getElementById("d-company").value,
+            email: document.getElementById("d-email").value,
+            whatsapp: document.getElementById("d-whatsapp").value
+          }
+        });
+        resEl.innerHTML = `
+          <strong>Ruta recomendada para ${escapeHtml(res.lead.company || res.lead.name)}:</strong><br/>
+          ${escapeHtml(res.evaluation.summary)}<br/><br/>
+          <span class="small">También te enviamos este resumen a <strong>${escapeHtml(res.lead.email)}</strong>.</span>
+        `;
+        resEl.classList.remove("hidden", "error");
+        document.getElementById("diag-wa").href = res.whatsapp_url;
+        actEl.classList.remove("hidden");
+      } catch (err) {
+        showNotice(resEl, err.message, true);
+      }
+    });
+  </script>
+</body>
+</html>

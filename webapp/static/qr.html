@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Contacto Directo — Aconcagua Agency Colombia</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <main class="container" style="max-width: 560px; padding-top: 48px;">
+    <div class="card" style="text-align: center;">
+      <span class="badge">⛰️ Aconcagua Agency Colombia</span>
+      <h1 id="qr-title" style="font-size: 1.75rem;">Contacto Directo</h1>
+      <p id="qr-channel" class="muted"></p>
+      <div class="btn-row" style="justify-content: center; margin-top: 18px;">
+        <a id="qr-wa-btn" href="https://wa.me/" class="btn">Escribir por WhatsApp ahora</a>
+        <a href="/diagnostico" class="btn btn-secondary">Hacer Diagnóstico Gratis</a>
+      </div>
+      <p class="muted small" style="margin-top: 16px;">@aconcagua.agency · Representación Colombia</p>
+    </div>
+  </main>
+
+  <script src="/static/common.js"></script>
+  <script>
+    async function loadQr() {
+      const parts = window.location.pathname.split("/").filter(Boolean);
+      const slug = parts[1] || "ig";
+      try {
+        const data = await apiJson(`/api/qr/${encodeURIComponent(slug)}`);
+        document.getElementById("qr-title").textContent = data.qr.title;
+        document.getElementById("qr-channel").textContent = `Canal: ${data.qr.channel_ref}`;
+        const btn = document.getElementById("qr-wa-btn");
+        btn.textContent = data.qr.cta_label || "Escribir por WhatsApp";
+        btn.href = data.whatsapp_url;
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    loadQr();
+  </script>
+</body>
+</html>

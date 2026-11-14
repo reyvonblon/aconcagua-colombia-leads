@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Aconcagua Agency Colombia — Llevamos tu marca a la cima</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <nav class="nav">
+    <div class="brand">
+      <span>⛰️ Aconcagua Agency</span>
+      <span class="badge">Colombia</span>
+    </div>
+    <div class="nav-links">
+      <a href="/" class="active">Servicios</a>
+      <a href="/diagnostico">Diagnóstico Gratis</a>
+      <a id="nav-ig" href="https://www.instagram.com/aconcagua.agency/" target="_blank" rel="noopener">@aconcagua.agency</a>
+      <a href="/admin">Panel Representante</a>
+    </div>
+  </nav>
+
+  <main class="container">
+    <section class="hero">
+      <div>
+        <span class="badge">Agencia de Marketing Digital & Performance</span>
+        <h1>Llevamos tu marca en Colombia a la cima</h1>
+        <p class="lead-copy">
+          Ayudamos a empresas en Colombia y Latinoamérica a escalar sus ventas con
+          <strong>Meta Ads, Google Ads, TikTok Ads, Creadores UGC, SEO y Desarrollo Web</strong>
+          orientados a retorno medible.
+        </p>
+        <div class="btn-row">
+          <a href="/diagnostico" class="btn">Hacer Diagnóstico Gratuito (2 min)</a>
+          <a id="hero-whatsapp" href="https://wa.me/" target="_blank" rel="noopener" class="btn btn-secondary">
+            Hablar por WhatsApp Colombia
+          </a>
+        </div>
+        <p class="muted small" style="margin-top:14px;">
+          Atención directa en Colombia · Estrategia regional conectada con @aconcagua.agency
+        </p>
+      </div>
+
+      <div class="card">
+        <h2>Solicita una propuesta para tu empresa</h2>
+        <p class="muted small">Déjanos tus datos y recibe hoy por correo nuestro análisis inicial + opciones de servicio.</p>
+        <form id="lead-form">
+          <label for="lead-name">Tu nombre *</label>
+          <input id="lead-name" required placeholder="Ej. Camila Restrepo" />
+
+          <label for="lead-company">Empresa o marca *</label>
+          <input id="lead-company" required placeholder="Ej. Clínica Dermovital Bogotá" />
+
+          <label for="lead-email">Correo corporativo o personal *</label>
+          <input id="lead-email" type="email" required placeholder="gerencia@tuempresa.com" />
+
+          <label for="lead-whatsapp">WhatsApp (+57...)</label>
+          <input id="lead-whatsapp" placeholder="+57 300 000 0000" />
+
+          <label for="lead-service">¿Qué necesitas escalar primero?</label>
+          <select id="lead-service">
+            <option value="Performance & Paid Media (Meta / Google / TikTok Ads)">Meta Ads, Google Ads o TikTok Ads (más ventas/leads)</option>
+            <option value="Influencer & UGC Marketing">Marketing con Creadores e Influencers (UGC)</option>
+            <option value="Social Media & Contenido">Redes Sociales y Contenido Audiovisual</option>
+            <option value="SEO & Visibilidad en IA (GEO)">Posicionamiento SEO y Buscadores IA</option>
+            <option value="Web, Apps & Transformación Digital">Página Web / Landing Page de Conversión</option>
+          </select>
+
+          <label for="lead-budget">Inversión mensual estimada en pauta/marketing</label>
+          <select id="lead-budget">
+            <option value="Por definir">Por definir (quiero asesoría)</option>
+            <option value="$1.5M - $4M COP / mes">$1.5M – $4M COP / mes</option>
+            <option value="$4M - $10M COP / mes">$4M – $10M COP / mes</option>
+            <option value="Más de $10M COP / mes">Más de $10M COP / mes</option>
+          </select>
+
+          <button type="submit" class="btn" style="width:100%;">Recibir Propuesta y Diagnóstico</button>
+          <div id="lead-msg" class="notice hidden"></div>
+        </form>
+      </div>
+    </section>
+
+    <section style="margin-top: 18px;">
+      <h2>Nuestros 5 Pilares de Crecimiento</h2>
+      <div id="services-grid" class="grid-3"></div>
+    </section>
+  </main>
+
+  <script src="/static/common.js"></script>
+  <script>
+    async function initLanding() {
+      try {
+        const cfg = await apiJson("/api/config");
+        const waBtn = document.getElementById("hero-whatsapp");
+        if (cfg.whatsapp_direct_url) waBtn.href = cfg.whatsapp_direct_url;
+        if (cfg.settings?.instagram_url) document.getElementById("nav-ig").href = cfg.settings.instagram_url;
+
+        const grid = document.getElementById("services-grid");
+        grid.innerHTML = (cfg.services || []).map(s => `
+          <div class="card">
+            <span class="badge">${escapeHtml(s.channels)}</span>
+            <h3 style="margin-top:10px;">${escapeHtml(s.name)}</h3>
+            <p class="muted small" style="margin:0;">${escapeHtml(s.summary)}</p>
+          </div>
+        `).join("");
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    document.getElementById("lead-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const msgEl = document.getElementById("lead-msg");
+      try {
+        await apiJson("/api/leads", {
+          method: "POST",
+          body: {
+            name: document.getElementById("lead-name").value,
+            company: document.getElementById("lead-company").value,
+            email: document.getElementById("lead-email").value,
+            whatsapp: document.getElementById("lead-whatsapp").value,
+            service_interest: document.getElementById("lead-service").value,
+            monthly_budget: document.getElementById("lead-budget").value,
+            source: "landing_colombia"
+          }
+        });
+        showNotice(msgEl, "¡Solicitud recibida! Revisa tu correo en los próximos minutos; nuestro representante en Colombia ya recibió tus datos.");
+        e.target.reset();
+      } catch (err) {
+        showNotice(msgEl, err.message, true);
+      }
+    });
+
+    initLanding();
+  </script>
+</body>
+</html>

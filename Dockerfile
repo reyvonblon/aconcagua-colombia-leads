@@ -1,0 +1,12 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+COPY . /app
+
+ENV ACONCAGUA_HOST=0.0.0.0
+ENV ACONCAGUA_PORT=8080
+ENV ACONCAGUA_QUIET=1
+
+EXPOSE 8080
+
+CMD ["python3", "webapp/server.py"]

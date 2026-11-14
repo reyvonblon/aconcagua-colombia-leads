@@ -1,0 +1,69 @@
+{
+  "agency": {
+    "name": "Aconcagua Agency",
+    "region_label": "Colombia",
+    "tagline": "Llevamos tu marca a la cima",
+    "subtitle": "Marketing de resultados, creadores UGC y estrategia digital para empresas que quieren escalar ventas en Colombia y Latinoamérica.",
+    "website": "https://aconcagua.agency",
+    "instagram_handle": "@aconcagua.agency",
+    "instagram_url": "https://www.instagram.com/aconcagua.agency/",
+    "representative_name": "Representante de Cuentas — Colombia",
+    "corporate_email": "",
+    "whatsapp_number": "",
+    "max_daily_emails": 25
+  },
+  "services": [
+    {
+      "id": "performance_ads",
+      "name": "Performance & Paid Media",
+      "channels": "Meta Ads, Google Ads y TikTok Ads",
+      "summary": "Campañas enfocadas en retorno sobre inversión (ROAS), captación de leads calificados y ventas medibles."
+    },
+    {
+      "id": "influencer_ugc",
+      "name": "Influencer & UGC Marketing",
+      "channels": "Creadores de contenido, casting y negociación",
+      "summary": "Conectamos tu marca con creadores confiables para generar contenido auténtico que convierte."
+    },
+    {
+      "id": "social_content",
+      "name": "Social Media & Contenido",
+      "channels": "Instagram, TikTok, diseño audiovisual",
+      "summary": "Estrategia mensual, producción de piezas de alto impacto y gestión profesional de comunidad."
+    },
+    {
+      "id": "seo_geo",
+      "name": "SEO & Visibilidad en IA (GEO)",
+      "channels": "Google Search y motores de respuesta IA",
+      "summary": "Posicionamiento orgánico para que tus clientes te encuentren primero en Google y buscadores con IA."
+    },
+    {
+      "id": "web_consulting",
+      "name": "Web, Apps & Transformación Digital",
+      "channels": "Landing pages, e-commerce y consultoría",
+      "summary": "Activos digitales optimizados para conversión, automatización comercial y analítica."
+    }
+  ],
+  "qr_routes": {
+    "ig": {
+      "title": "Contacto desde Instagram (@aconcagua.agency)",
+      "channel_ref": "Instagram Bio / Reels",
+      "cta_label": "Solicitar diagnóstico por WhatsApp"
+    },
+    "ads": {
+      "title": "Contacto desde Anuncio Meta/Google",
+      "channel_ref": "Pauta Digital Colombia",
+      "cta_label": "Hablar con Representante Colombia"
+    },
+    "linkedin": {
+      "title": "Contacto desde LinkedIn",
+      "channel_ref": "LinkedIn B2B",
+      "cta_label": "Agendar llamada por WhatsApp"
+    },
+    "tarjeta": {
+      "title": "Contacto Directo — Representante Colombia",
+      "channel_ref": "Tarjeta / Reunión Presencial",
+      "cta_label": "Escribir por WhatsApp ahora"
+    }
+  }
+}

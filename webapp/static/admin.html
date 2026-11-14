@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Panel Representante Colombia — Aconcagua Agency</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <nav class="nav">
+    <div class="brand">
+      <span>⛰️ Aconcagua Colombia</span>
+      <span class="badge">CRM Representante</span>
+    </div>
+    <div class="nav-links">
+      <a href="/">Ver Landing Pública</a>
+      <a href="/diagnostico">Ver Diagnóstico</a>
+      <a href="/admin" class="active">Panel CRM</a>
+    </div>
+  </nav>
+
+  <main class="container">
+    <div class="grid-4" style="margin-bottom: 20px;">
+      <div class="kpi">
+        <div class="kpi-label">Leads Totales</div>
+        <div id="k-leads" class="kpi-value">0</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Calificados / Diagnóstico</div>
+        <div id="k-qual" class="kpi-value">0</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Clics Enlaces / QR</div>
+        <div id="k-qr" class="kpi-value">0</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Correos Hoy / Tope</div>
+        <div id="k-mail" class="kpi-value">0 / 25</div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="tab-leads">1. Pipeline de Clientes</button>
+      <button class="tab-btn" data-tab="tab-outreach">2. Prospección Automática (CSV + Correo)</button>
+      <button class="tab-btn" data-tab="tab-config">3. Enlaces y Configuración</button>
+    </div>
+
+    <!-- TAB 1: LEADS -->
+    <section id="tab-leads" class="card">
+      <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:14px;">
+        <h2 style="margin:0;">Leads y Prospectos</h2>
+        <div class="btn-row">
+          <a href="/api/leads/export.csv" class="btn btn-secondary btn-sm">Descargar CSV</a>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 1fr 240px; gap: 12px; margin-bottom: 12px;">
+        <input id="f-search" placeholder="Buscar por nombre, empresa, correo o industria..." style="margin:0;" />
+        <select id="f-stage" style="margin:0;">
+          <option value="">Todas las etapas</option>
+          <option value="nuevo_lead">Nuevo lead</option>
+          <option value="diagnostico_enviado">Diagnóstico enviado</option>
+          <option value="reunion_agendada">Reunión agendada</option>
+          <option value="propuesta">Propuesta enviada</option>
+          <option value="cerrado_ganado">Cliente cerrado</option>
+        </select>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Contacto / Empresa</th>
+              <th>Servicio & Presupuesto</th>
+              <th>Origen</th>
+              <th>Etapa</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody id="leads-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 2: OUTREACH CSV + OUTBOX -->
+    <section id="tab-outreach" class="card hidden">
+      <h2>Prospección Automática por Correo Corporativo</h2>
+      <p class="muted small">
+        Pega una lista CSV de empresas en Colombia. El sistema agenda automáticamente el correo de presentación (Día 0),
+        seguimiento (Día 3) y cierre (Día 7), respetando el tope diario anti-spam.
+      </p>
+      <label for="csv-input">Pega aquí tu CSV (encabezados: nombre,empresa,correo,whatsapp,industria,servicio)</label>
+      <textarea id="csv-input" rows="5" placeholder="nombre,empresa,correo,whatsapp,industria,servicio
+Laura Gómez,Clínica Aura Bogotá,gerencia@clinicaaura.co,+573001112233,Salud y Estética,Meta Ads y UGC"></textarea>
+      <div class="btn-row">
+        <button id="btn-import-csv" class="btn">Cargar Lista y Programar Correos</button>
+        <button id="btn-dispatch-now" class="btn btn-amber">Enviar Correos Pendientes Ahora</button>
+      </div>
+      <div id="outreach-msg" class="notice hidden"></div>
+
+      <h3 style="margin-top:24px;">Cola de Envíos Automáticos</h3>
+      <div id="smtp-status" class="muted small" style="margin-bottom:10px;"></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Destinatario</th>
+              <th>Asunto</th>
+              <th>Programado</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="outbox-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 3: LINKS & SETTINGS -->
+    <section id="tab-config" class="card hidden">
+      <h2>Enlaces Rastreables para @aconcagua.agency y Anuncios</h2>
+      <div id="links-box" class="grid-3" style="margin-bottom:22px;"></div>
+
+      <h2>Configuración de Representante en Colombia</h2>
+      <form id="settings-form">
+        <label for="s-email">Tu correo corporativo</label>
+        <input id="s-email" type="email" placeholder="tunombre@aconcagua.agency" />
+
+        <label for="s-wa">Tu WhatsApp en Colombia (con código de país, ej. +573001234567)</label>
+        <input id="s-wa" placeholder="+57 300 123 4567" />
+
+        <label for="s-cap">Tope máximo de correos automáticos por día (anti-spam)</label>
+        <input id="s-cap" type="number" min="1" max="200" value="25" />
+
+        <button type="submit" class="btn">Guardar Configuración</button>
+        <div id="settings-msg" class="notice hidden"></div>
+      </form>
+    </section>
+  </main>
+
+  <script src="/static/common.js"></script>
+  <script>
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        ["tab-leads", "tab-outreach", "tab-config"].forEach(id => {
+          document.getElementById(id).classList.toggle("hidden", id !== btn.dataset.tab);
+        });
+      });
+    });
+
+    async function loadDashboard() {
+      const data = await apiJson("/api/dashboard");
+      const m = data.metrics;
+      const ap = data.autopilot;
+      document.getElementById("k-leads").textContent = m.total_leads;
+      document.getElementById("k-qual").textContent = m.qualified_count;
+      document.getElementById("k-qr").textContent = m.qr_scans;
+      document.getElementById("k-mail").textContent = `${ap.sent_today} / ${ap.max_daily_emails}`;
+
+      document.getElementById("s-email").value = data.settings.corporate_email || "";
+      document.getElementById("s-wa").value = data.settings.whatsapp_number || "";
+      document.getElementById("s-cap").value = data.settings.max_daily_emails || "25";
+
+      const origin = window.location.origin;
+      const links = [
+        { label: "Bio Instagram (@aconcagua.agency)", url: `${origin}/qr/ig` },
+        { label: "Diagnóstico Gratuito (Ads)", url: `${origin}/diagnostico` },
+        { label: "Enlace LinkedIn B2B", url: `${origin}/qr/linkedin` }
+      ];
+      document.getElementById("links-box").innerHTML = links.map(l => `
+        <div class="kpi">
+          <div class="kpi-label">${escapeHtml(l.label)}</div>
+          <div class="small" style="word-break:break-all; margin-top:6px;">${escapeHtml(l.url)}</div>
+        </div>
+      `).join("");
+    }
+
+    async function loadLeads() {
+      const search = document.getElementById("f-search").value;
+      const stage = document.getElementById("f-stage").value;
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      if (stage) params.set("stage", stage);
+      const data = await apiJson(`/api/leads?${params.toString()}`);
+      const tbody = document.getElementById("leads-body");
+      tbody.innerHTML = (data.leads || []).map(l => `
+        <tr>
+          <td>
+            <strong>${escapeHtml(l.name)}</strong> ${l.company ? `· ${escapeHtml(l.company)}` : ""}<br/>
+            <span class="muted small">${escapeHtml(l.email)} ${l.whatsapp ? `· ${escapeHtml(l.whatsapp)}` : ""}</span>
+          </td>
+          <td>
+            ${escapeHtml(l.service_interest || "-")}<br/>
+            <span class="muted small">${escapeHtml(l.monthly_budget || l.industry || "")}</span>
+          </td>
+          <td><span class="badge">${escapeHtml(l.source)}</span></td>
+          <td>
+            <select data-lead-id="${l.id}" class="stage-sel" style="margin:0; padding:6px;">
+              ${["nuevo_lead", "diagnostico_enviado", "reunion_agendada", "propuesta", "cerrado_ganado"].map(s => `
+                <option value="${s}" ${l.stage === s ? "selected" : ""}>${s.replaceAll("_", " ")}</option>
+              `).join("")}
+            </select>
+          </td>
+          <td>
+            ${l.whatsapp_chat_url ? `<a href="${l.whatsapp_chat_url}" target="_blank" rel="noopener" class="btn btn-sm">WhatsApp</a>` : `<span class="muted small">Sin WhatsApp</span>`}
+          </td>
+        </tr>
+      `).join("") || `<tr><td colspan="5" class="muted">Aún no hay leads registrados.</td></tr>`;
+
+      document.querySelectorAll(".stage-sel").forEach(sel => {
+        sel.addEventListener("change", async () => {
+          await apiJson(`/api/leads/${sel.dataset.leadId}`, {
+            method: "PATCH",
+            body: { stage: sel.value }
+          });
+          loadDashboard();
+        });
+      });
+    }
+
+    async function loadOutbox() {
+      const data = await apiJson("/api/admin/outbox");
+      const st = data.config_status;
+      document.getElementById("smtp-status").textContent = st.smtp_ready
+        ? `Correo corporativo listo (${st.sent_today}/${st.max_daily_emails} enviados hoy).`
+        : "Correo corporativo pendiente: configura SMTP_HOST, SMTP_USER y SMTP_PASS en .env o Render.";
+
+      const tbody = document.getElementById("outbox-body");
+      tbody.innerHTML = (data.jobs || []).map(j => `
+        <tr>
+          <td>${escapeHtml(j.recipient)}</td>
+          <td>${escapeHtml(j.subject)}</td>
+          <td class="small muted">${escapeHtml(j.scheduled_for)}</td>
+          <td><span class="badge">${escapeHtml(j.status)}</span></td>
+        </tr>
+      `).join("") || `<tr><td colspan="4" class="muted">No hay correos en cola.</td></tr>`;
+    }
+
+    document.getElementById("f-search").addEventListener("input", loadLeads);
+    document.getElementById("f-stage").addEventListener("change", loadLeads);
+
+    document.getElementById("btn-import-csv").addEventListener("click", async () => {
+      const msgEl = document.getElementById("outreach-msg");
+      try {
+        const res = await apiJson("/api/admin/prospects/import-csv", {
+          method: "POST",
+          body: { csv_text: document.getElementById("csv-input").value }
+        });
+        showNotice(msgEl, `Importados: ${res.imported} prospectos (se programaron 3 correos por cada uno). Omitidos: ${res.skipped}.`);
+        loadLeads();
+        loadOutbox();
+        loadDashboard();
+      } catch (err) {
+        showNotice(msgEl, err.message, true);
+      }
+    });
+
+    document.getElementById("btn-dispatch-now").addEventListener("click", async () => {
+      const msgEl = document.getElementById("outreach-msg");
+      try {
+        const res = await apiJson("/api/admin/outbox/dispatch", { method: "POST", body: {} });
+        showNotice(msgEl, `Enviados: ${res.sent} · Programados para después: ${res.scheduled_for_later} · Sin credenciales: ${res.skipped_missing_credentials} · Tope diario: ${res.skipped_daily_cap}`);
+        loadOutbox();
+        loadDashboard();
+      } catch (err) {
+        showNotice(msgEl, err.message, true);
+      }
+    });
+
+    document.getElementById("settings-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const msgEl = document.getElementById("settings-msg");
+      try {
+        await apiJson("/api/settings", {
+          method: "PATCH",
+          body: {
+            corporate_email: document.getElementById("s-email").value,
+            whatsapp_number: document.getElementById("s-wa").value,
+            max_daily_emails: document.getElementById("s-cap").value
+          }
+        });
+        showNotice(msgEl, "Configuración guardada.");
+        loadDashboard();
+      } catch (err) {
+        showNotice(msgEl, err.message, true);
+      }
+    });
+
+    loadDashboard();
+    loadLeads();
+    loadOutbox();
+  </script>
+</body>
+</html>
