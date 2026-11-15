@@ -10,6 +10,7 @@ import json
 import os
 import re
 import smtplib
+import subprocess
 import sys
 import threading
 import urllib.request
@@ -211,6 +212,23 @@ def _extract_text_snippet(msg: email.message.Message) -> str:
     return ""
 
 
+def notify_mac_desktop(title: str, message: str) -> bool:
+    """Show a native macOS notification with sound when an interested lead is detected."""
+    if sys.platform != "darwin" or os.environ.get("ACONCAGUA_QUIET") == "1":
+        return False
+    safe_title = title.replace('"', '\\"')[:80]
+    safe_msg = message.replace('"', '\\"')[:180]
+    script = (
+        f'display notification "{safe_msg}" '
+        f'with title "Aconcagua Colombia" subtitle "{safe_title}" sound name "Glass"'
+    )
+    try:
+        subprocess.run(["osascript", "-e", script], check=False, timeout=5)
+        return True
+    except Exception:
+        return False
+
+
 def classify_reply_intent(subject: str, body: str) -> str:
     """Classify an inbound lead reply as interesado_cita, no_interesado, or respuesta_recibida."""
     text = re.sub(r"\s+", " ", f"{subject} {body}".lower()).strip()
@@ -324,6 +342,10 @@ def sync_imap_replies(max_messages: int = 40) -> dict[str, object]:
                                 "email": sender_email,
                                 "snippet": snippet[:180],
                             }
+                        )
+                        notify_mac_desktop(
+                            f"Cita interesada: {lead['company'] or lead['name']}",
+                            f"{sender_email} respondió interesado en agendar cita.",
                         )
                         notify_to = cfg.get("SMTP_REPLY_TO") or ""
                         if notify_to and cfg.get("SMTP_HOST"):

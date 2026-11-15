@@ -344,6 +344,11 @@ class AconcaguaHandler(BaseHTTPRequestHandler):
             except ValueError as exc:
                 self._send_json({"error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
                 return
+            if stage == "interesado_cita":
+                autopilot_dispatcher.notify_mac_desktop(
+                    f"Nueva cita solicitada: {lead['company'] or lead['name']}",
+                    f"{lead['email']} pidió agendar cita desde la web.",
+                )
             self._send_json({"lead": lead}, status=HTTPStatus.CREATED)
             return
 
@@ -367,6 +372,11 @@ class AconcaguaHandler(BaseHTTPRequestHandler):
             except ValueError as exc:
                 self._send_json({"error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
                 return
+            if stage == "interesado_cita":
+                autopilot_dispatcher.notify_mac_desktop(
+                    f"Diagnóstico con cita: {lead['company'] or lead['name']}",
+                    f"{lead['email']} pidió agendar llamada tras el diagnóstico.",
+                )
             settings = database.get_settings()
             corp_email = settings.get("corporate_email") or "raymondvonblon@aconcagua.agency"
             wa_msg = (
