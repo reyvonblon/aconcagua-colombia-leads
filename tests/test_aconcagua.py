@@ -150,6 +150,13 @@ class TestAconcaguaWebApp(unittest.TestCase):
             ),
             "no_interesado",
         )
+        self.assertEqual(
+            autopilot_dispatcher.classify_reply_intent(
+                "Re: Propuesta de Auditoría Digital y Comercial – Blush-Bar",
+                "Gracias por escribirnos. Hemos recibido tu solicitud #12345 y nuestro equipo se pondrá en contacto.",
+            ),
+            "respuesta_automatica",
+        )
 
         # Lead requesting a meeting goes straight to /api/admin/citas and cancels pending follow-ups
         status, lead_body = self._req(

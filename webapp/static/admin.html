@@ -67,6 +67,28 @@
       </div>
     </section>
 
+    <!-- SEPARATE AUTO-REPLIES / TICKETS SECTION -->
+    <section class="card" style="margin-bottom:18px; border: 1px solid #cbd5e1;">
+      <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:8px;">
+        <div>
+          <h2 style="margin:0; font-size:1.05rem;">Respuestas Automáticas (Tickets / Auto-reply)</h2>
+          <div class="muted small">Correos de acuse de recibo automático (no son respuesta humana todavía). Si una persona responde después, pasará arriba y te notificaremos.</div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Empresa / Contacto</th>
+              <th>Detalle del acuse automático</th>
+              <th>Actualizado</th>
+            </tr>
+          </thead>
+          <tbody id="auto-replies-body"></tbody>
+        </table>
+      </div>
+    </section>
+
     <div class="tabs">
       <button class="tab-btn active" data-tab="tab-leads">1. Pipeline de Clientes</button>
       <button class="tab-btn" data-tab="tab-outreach">2. Prospección Automática (CSV + Correo)</button>
@@ -92,6 +114,7 @@
           <option value="reunion_agendada">Reunión agendada</option>
           <option value="propuesta">Propuesta enviada</option>
           <option value="cerrado_ganado">Cliente cerrado</option>
+          <option value="respuesta_automatica">Respuesta automática (ticket)</option>
           <option value="no_interesado">No interesado</option>
         </select>
       </div>
@@ -227,6 +250,21 @@ Laura Gómez,Clínica Aura Bogotá,gerencia@clinicaaura.co,+573001112233,Salud y
       `).join("") || `<tr><td colspan="4" class="muted">Aún no hay leads interesados en agendar cita. Haz clic en "Sincronizar Respuestas (Gmail)" para revisar nuevos correos.</td></tr>`;
     }
 
+    async function loadAutoReplies() {
+      const data = await apiJson("/api/leads?stage=respuesta_automatica");
+      const tbody = document.getElementById("auto-replies-body");
+      tbody.innerHTML = (data.leads || []).map(l => `
+        <tr>
+          <td>
+            <strong>${escapeHtml(l.company || l.name)}</strong><br/>
+            <span class="muted small">${escapeHtml(l.email)}</span>
+          </td>
+          <td class="small">${escapeHtml((l.notes || "-").slice(0, 200))}</td>
+          <td class="small muted">${escapeHtml(l.updated_at || "")}</td>
+        </tr>
+      `).join("") || `<tr><td colspan="3" class="muted">No hay respuestas automáticas registradas.</td></tr>`;
+    }
+
     async function loadLeads() {
       const search = document.getElementById("f-search").value;
       const stage = document.getElementById("f-stage").value;
@@ -248,7 +286,7 @@ Laura Gómez,Clínica Aura Bogotá,gerencia@clinicaaura.co,+573001112233,Salud y
           <td><span class="badge">${escapeHtml(l.source)}</span></td>
           <td>
             <select data-lead-id="${l.id}" class="stage-sel" style="margin:0; padding:6px;">
-              ${["nuevo_lead", "diagnostico_enviado", "interesado_cita", "reunion_agendada", "propuesta", "cerrado_ganado", "no_interesado"].map(s => `
+              ${["nuevo_lead", "diagnostico_enviado", "interesado_cita", "reunion_agendada", "propuesta", "cerrado_ganado", "respuesta_automatica", "no_interesado"].map(s => `
                 <option value="${s}" ${l.stage === s ? "selected" : ""}>${s.replaceAll("_", " ")}</option>
               `).join("")}
             </select>
@@ -267,6 +305,7 @@ Laura Gómez,Clínica Aura Bogotá,gerencia@clinicaaura.co,+573001112233,Salud y
           });
           loadDashboard();
           loadCitas();
+          loadAutoReplies();
         });
       });
     }
@@ -299,6 +338,7 @@ Laura Gómez,Clínica Aura Bogotá,gerencia@clinicaaura.co,+573001112233,Salud y
         const citasCount = (res.interested_citas || []).length;
         showNotice(msgEl, `Bandeja revisada: ${res.checked || 0} correos · Respuestas de leads: ${res.matched || 0} · Nuevos listos para cita: ${citasCount}.`);
         loadCitas();
+        loadAutoReplies();
         loadLeads();
         loadOutbox();
         loadDashboard();
@@ -356,6 +396,7 @@ Laura Gómez,Clínica Aura Bogotá,gerencia@clinicaaura.co,+573001112233,Salud y
 
     loadDashboard();
     loadCitas();
+    loadAutoReplies();
     loadLeads();
     loadOutbox();
   </script>

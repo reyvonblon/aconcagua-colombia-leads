@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import email
+import html
 import imaplib
 import json
 import os
@@ -194,22 +195,57 @@ def _decode_mime_header(raw_val: str) -> str:
     return "".join(decoded).strip()
 
 
+def _html_to_text(raw_html: str) -> str:
+    cleaned = re.sub(r"(?is)<(script|style)[^>]*>.*?</\1>", " ", raw_html)
+    cleaned = re.sub(r"<[^>]+>", " ", cleaned)
+    cleaned = html.unescape(cleaned)
+    return re.sub(r"\s+", " ", cleaned).strip()
+
+
+def _strip_quoted_reply(text: str) -> str:
+    """Remove quoted original email blocks so our own subject/body words don't trigger false positives."""
+    lines: list[str] = []
+    for line in text.splitlines():
+        low = line.strip().lower()
+        if low.startswith(">"):
+            continue
+        if re.match(r"^(el|on)\s+.+(escribió|wrote):$", low):
+            break
+        if low.startswith("-----original message-----") or low.startswith("-----mensaje original-----"):
+            break
+        lines.append(line)
+    return re.sub(r"\s+", " ", " ".join(lines)).strip()
+
+
 def _extract_text_snippet(msg: email.message.Message) -> str:
+    plain_text = ""
+    html_text = ""
     if msg.is_multipart():
         for part in msg.walk():
             ctype = part.get_content_type()
             disp = str(part.get("Content-Disposition") or "")
-            if ctype == "text/plain" and "attachment" not in disp.lower():
-                payload = part.get_payload(decode=True)
-                if payload:
-                    charset = part.get_content_charset() or "utf-8"
-                    return payload.decode(charset, errors="replace").strip()[:400]
+            if "attachment" in disp.lower():
+                continue
+            payload = part.get_payload(decode=True)
+            if not payload:
+                continue
+            charset = part.get_content_charset() or "utf-8"
+            decoded = payload.decode(charset, errors="replace")
+            if ctype == "text/plain" and not plain_text:
+                plain_text = decoded
+            elif ctype == "text/html" and not html_text:
+                html_text = _html_to_text(decoded)
     else:
         payload = msg.get_payload(decode=True)
         if payload:
             charset = msg.get_content_charset() or "utf-8"
-            return payload.decode(charset, errors="replace").strip()[:400]
-    return ""
+            decoded = payload.decode(charset, errors="replace")
+            if msg.get_content_type() == "text/html":
+                html_text = _html_to_text(decoded)
+            else:
+                plain_text = decoded
+    raw = plain_text or html_text
+    return _strip_quoted_reply(raw)[:400]
 
 
 def notify_mac_desktop(title: str, message: str) -> bool:
@@ -229,9 +265,59 @@ def notify_mac_desktop(title: str, message: str) -> bool:
         return False
 
 
-def classify_reply_intent(subject: str, body: str) -> str:
-    """Classify an inbound lead reply as interesado_cita, no_interesado, or respuesta_recibida."""
-    text = re.sub(r"\s+", " ", f"{subject} {body}".lower()).strip()
+def classify_reply_intent(subject: str, body: str, headers: dict[str, str] | None = None) -> str:
+    """Classify an inbound lead reply as respuesta_automatica, interesado_cita, no_interesado, or respuesta_recibida."""
+    hdrs = {k.lower(): (v or "").lower() for k, v in (headers or {}).items()}
+    if (
+        (hdrs.get("auto-submitted") and hdrs.get("auto-submitted") != "no")
+        or hdrs.get("x-auto-response-suppress")
+        or hdrs.get("precedence") in ("bulk", "auto_reply", "junk")
+        or hdrs.get("x-zendesk-ticket-id")
+        or hdrs.get("x-freshdesk-ticket-id")
+    ):
+        return "respuesta_automatica"
+
+    clean_body = _strip_quoted_reply(body).lower()
+    clean_subj = re.sub(r"^(re|fwd|rv):\s*", "", (subject or "").strip(), flags=re.IGNORECASE).lower()
+    combined = re.sub(r"\s+", " ", f"{clean_subj} {clean_body}").strip()
+
+    auto_reply_kw = (
+        "ticket",
+        "solicitud #",
+        "caso #",
+        "número de caso",
+        "numero de caso",
+        "número de ticket",
+        "numero de ticket",
+        "hemos recibido tu",
+        "hemos recibido su",
+        "recibimos tu mensaje",
+        "recibimos tu correo",
+        "recibimos tu solicitud",
+        "respuesta automática",
+        "respuesta automatica",
+        "auto-reply",
+        "autoreply",
+        "automatic reply",
+        "out of office",
+        "fuera de oficina",
+        "nuestro equipo se pondrá en contacto",
+        "nuestro equipo se pondra en contacto",
+        "nuestro equipo te responderá",
+        "nuestro equipo te respondera",
+        "gracias por contactarnos",
+        "gracias por escribirnos",
+        "gracias por comunicarte",
+        "your request has been received",
+        "we have received your",
+        "request received",
+        "no-reply",
+        "noreply",
+        "do not reply",
+    )
+    if any(kw in combined for kw in auto_reply_kw):
+        return "respuesta_automatica"
+
     negative_kw = (
         "no gracias",
         "no estamos interesados",
@@ -243,7 +329,7 @@ def classify_reply_intent(subject: str, body: str) -> str:
         "dejar de escribir",
         "no me escriban",
     )
-    if any(kw in text for kw in negative_kw):
+    if any(kw in clean_body for kw in negative_kw):
         return "no_interesado"
 
     positive_kw = (
@@ -276,7 +362,8 @@ def classify_reply_intent(subject: str, body: str) -> str:
         "sí claro",
         "si claro",
     )
-    if any(kw in text for kw in positive_kw):
+    # Match positive keywords ONLY on the reply body (never on echoed email subject!)
+    if any(kw in clean_body for kw in positive_kw):
         return "interesado_cita"
     return "respuesta_recibida"
 
@@ -322,7 +409,14 @@ def sync_imap_replies(max_messages: int = 40) -> dict[str, object]:
 
                     subj = _decode_mime_header(msg.get("Subject") or "")
                     snippet = _extract_text_snippet(msg)
-                    intent = classify_reply_intent(subj, snippet)
+                    hdrs = {
+                        "Auto-Submitted": msg.get("Auto-Submitted") or "",
+                        "X-Auto-Response-Suppress": msg.get("X-Auto-Response-Suppress") or "",
+                        "Precedence": msg.get("Precedence") or "",
+                        "X-Zendesk-Ticket-Id": msg.get("X-Zendesk-Ticket-Id") or "",
+                        "X-Freshdesk-Ticket-Id": msg.get("X-Freshdesk-Ticket-Id") or "",
+                    }
+                    intent = classify_reply_intent(subj, snippet, headers=hdrs)
                     database.record_processed_reply(msg_id, sender_email, intent, snippet)
                     matched += 1
 
@@ -330,9 +424,13 @@ def sync_imap_replies(max_messages: int = 40) -> dict[str, object]:
                     prev_notes = (lead.get("notes") or "").strip()
                     new_note = f"[Respuesta {stamp} | {intent}] Asunto: {subj} — {snippet[:220]}"
                     merged_notes = f"{new_note}\n{prev_notes}".strip() if prev_notes else new_note
-                    next_stage = intent if intent in ("interesado_cita", "no_interesado") else lead["stage"]
+                    if intent in ("interesado_cita", "no_interesado", "respuesta_automatica"):
+                        next_stage = intent
+                    else:
+                        next_stage = lead["stage"]
                     database.update_lead_stage(lead["id"], next_stage, notes=merged_notes)
-                    database.cancel_pending_outbox_for_recipient(sender_email)
+                    if intent != "respuesta_automatica":
+                        database.cancel_pending_outbox_for_recipient(sender_email)
 
                     if intent == "interesado_cita":
                         interested_citas.append(
