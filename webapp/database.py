@@ -213,59 +213,60 @@ def _queue_outbound_sequence(
     service_interest: str,
 ) -> None:
     company_txt = company or "tu marca"
-    industry_txt = f" en {industry}" if industry else " en Colombia"
-    service_txt = service_interest or "Meta Ads, TikTok Ads y Google Ads orientados a ventas"
+    industry_txt = industry or "su sector"
+    first_name = (name or "").split()[0] if name and not name.lower().startswith("equipo") else ""
+    greeting = f"Hola {first_name}," if first_name else f"Hola equipo de {company_txt},"
 
     _queue_email(
         conn,
         recipient=email,
-        subject=f"Idea rápida para escalar ventas de {company_txt} en Colombia",
+        subject=f"Propuesta de Auditoría Digital y Comercial – {company_txt}",
         body=(
-            f"Hola equipo de {company_txt},\n\n"
-            "Soy Raymond Von Blon, representante en Colombia de Aconcagua Agency (https://aconcagua.agency · @aconcagua.agency).\n\n"
-            f"Ayudamos a marcas{industry_txt} a escalar ventas combinando:\n"
-            f"- Campañas de alto retorno en Meta Ads, TikTok Ads y Google Ads ({service_txt}).\n"
-            "- Posicionamiento en IA (GEO): para que ChatGPT, Gemini y Google recomienden tu marca.\n"
-            "- Contenido con creadores UGC orientado a conversión.\n\n"
-            "Si les interesa, les preparo un diagnóstico corto de 3 puntos sin costo para su marca.\n"
-            "¿Les parece si les envío el resumen por aquí o prefieren agendar 15 min?\n\n"
-            "También pueden hacerlo en 2 minutos aquí:\n"
-            "https://aconcagua-colombia-leads.onrender.com/diagnostico\n\n"
-            "Un saludo,\n"
+            f"{greeting}\n\n"
+            "Espero que estén muy bien.\n\n"
+            "Mi nombre es Raymond Von Blon, Ejecutivo de Cuentas de Aconcagua Agency para Colombia (https://aconcagua.agency · @aconcagua.agency).\n\n"
+            f"Nos contactamos con {company_txt} porque hemos estado siguiendo la marca y consideramos que tiene una presencia muy interesante dentro del mercado de {industry_txt} en Colombia.\n\n"
+            "Desde Aconcagua nos gustaría proponerles una auditoría digital y comercial sin costo y sin compromiso, enfocada en analizar el recorrido completo del consumidor: adquisición y pauta (Meta Ads, TikTok Ads y Google Ads), contenido y creadores UGC, redes sociales, sitio web / ecommerce, conversión, remarketing y posicionamiento en buscadores e IA (SEO y GEO).\n\n"
+            f"La intención no es asumir que la operación actual tenga deficiencias, sino analizar objetivamente qué está funcionando, dónde puede existir una oportunidad y si nuestra experiencia puede generar valor adicional para {company_txt}.\n\n"
+            "En caso de encontrar una oportunidad concreta, podríamos plantear posteriormente una intervención específica y medible.\n\n"
+            "Si les parece interesante, quedamos atentos por este correo para coordinar y comenzar con la revisión (o pueden completar nuestro diagnóstico rápido aquí: https://aconcagua-colombia-leads.onrender.com/diagnostico).\n\n"
+            "Muchas gracias por su tiempo.\n\n"
             "Raymond Von Blon\n"
-            "Representante de Cuentas Colombia — Aconcagua Agency\n"
-            "raymondvonblon@aconcagua.agency"
+            "Ejecutivo de Cuentas | Account Executive\n"
+            "🇨🇴 Colombia\n"
+            "raymondvonblon@aconcagua.agency\n"
+            "aconcagua.agency"
         ),
         delay_hours=0,
     )
     _queue_email(
         conn,
         recipient=email,
-        subject=f"Re: Idea rápida para {company_txt}",
+        subject=f"Re: Propuesta de Auditoría Digital y Comercial – {company_txt}",
         body=(
-            f"Hola equipo de {company_txt},\n\n"
-            "Paso brevemente por si no vieron mi correo anterior.\n\n"
-            "En Aconcagua trabajamos con marcas de beauty, skincare, moda y consumo en Latinoamérica "
-            "conectando pauta medible (Meta/Google/TikTok Ads) con creadores UGC y GEO en buscadores de IA.\n\n"
-            "Si quieren ver 3 oportunidades rápidas para su tienda/marca en Colombia, solo respóndanme este correo.\n\n"
-            "Saludos,\n"
-            "Raymond Von Blon · Aconcagua Agency Colombia\n"
-            "raymondvonblon@aconcagua.agency"
+            f"{greeting}\n\n"
+            f"Hago un breve seguimiento a mi correo anterior sobre la auditoría digital y comercial sin costo para {company_txt}.\n\n"
+            "En la revisión revisamos sin compromiso oportunidades concretas en Meta Ads, TikTok Ads, Google Ads, creadores UGC y conversión web/ecommerce, sin asumir fallas sino buscando puntos medibles de crecimiento.\n\n"
+            "Si les parece bien, solo respóndanme este correo y coordinamos.\n\n"
+            "Saludos,\n\n"
+            "Raymond Von Blon\n"
+            "Ejecutivo de Cuentas | Account Executive 🇨🇴 Colombia\n"
+            "raymondvonblon@aconcagua.agency · aconcagua.agency"
         ),
         delay_hours=72,
     )
     _queue_email(
         conn,
         recipient=email,
-        subject=f"Cierro por ahora — {company_txt}",
+        subject=f"Cierro seguimiento por ahora – {company_txt}",
         body=(
-            f"Hola equipo de {company_txt},\n\n"
-            "No quiero saturar su bandeja, así que dejo este último mensaje por si más adelante "
-            "buscan escalar ventas en Colombia con pauta, creadores UGC o SEO/GEO.\n\n"
-            "Aquí tienen mi contacto directo.\n\n"
-            "Éxitos,\n"
-            "Raymond Von Blon · Aconcagua Agency Colombia\n"
-            "raymondvonblon@aconcagua.agency"
+            f"{greeting}\n\n"
+            "No quiero saturar su bandeja, así que cierro este seguimiento por ahora.\n\n"
+            f"Cuando {company_txt} quiera evaluar una auditoría sin costo en pauta (Meta Ads, TikTok Ads, Google Ads), creadores UGC o posicionamiento SEO/GEO en Colombia, quedo a disposición por este correo.\n\n"
+            "Muchas gracias por su tiempo.\n\n"
+            "Raymond Von Blon\n"
+            "Ejecutivo de Cuentas | Account Executive 🇨🇴 Colombia\n"
+            "raymondvonblon@aconcagua.agency · aconcagua.agency"
         ),
         delay_hours=168,
     )
