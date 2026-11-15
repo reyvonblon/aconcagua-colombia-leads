@@ -214,7 +214,7 @@ def _queue_outbound_sequence(
 ) -> None:
     company_txt = company or "tu marca"
     industry_txt = f" en {industry}" if industry else " en Colombia"
-    service_txt = service_interest or "Meta/TikTok Ads, creadores UGC y posicionamiento en Google/IA (GEO)"
+    service_txt = service_interest or "Meta Ads, TikTok Ads y Google Ads orientados a ventas"
 
     _queue_email(
         conn,
@@ -224,7 +224,7 @@ def _queue_outbound_sequence(
             f"Hola equipo de {company_txt},\n\n"
             "Soy Raymond Von Blon, representante en Colombia de Aconcagua Agency (https://aconcagua.agency · @aconcagua.agency).\n\n"
             f"Ayudamos a marcas{industry_txt} a escalar ventas combinando:\n"
-            f"- {service_txt}\n"
+            f"- Campañas de alto retorno en Meta Ads, TikTok Ads y Google Ads ({service_txt}).\n"
             "- Posicionamiento en IA (GEO): para que ChatGPT, Gemini y Google recomienden tu marca.\n"
             "- Contenido con creadores UGC orientado a conversión.\n\n"
             "Si les interesa, les preparo un diagnóstico corto de 3 puntos sin costo para su marca.\n"
