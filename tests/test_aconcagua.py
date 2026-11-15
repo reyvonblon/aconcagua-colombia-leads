@@ -133,6 +133,67 @@ class TestAconcaguaWebApp(unittest.TestCase):
             self._req("/static/../../config/agency_profile.json")
         self.assertEqual(ctx.exception.code, 404)
 
+    def test_appointment_handoff_and_reply_classification(self) -> None:
+        import autopilot_dispatcher  # noqa: E402
+
+        self.assertEqual(
+            autopilot_dispatcher.classify_reply_intent(
+                "Re: Propuesta de Auditoría Digital",
+                "Hola Raymond, sí nos interesa agendar una cita esta semana.",
+            ),
+            "interesado_cita",
+        )
+        self.assertEqual(
+            autopilot_dispatcher.classify_reply_intent(
+                "Re: Propuesta",
+                "No gracias, por favor no estamos interesados.",
+            ),
+            "no_interesado",
+        )
+
+        # Lead requesting a meeting goes straight to /api/admin/citas and cancels pending follow-ups
+        status, lead_body = self._req(
+            "/api/leads",
+            method="POST",
+            payload={
+                "name": "Laura Gómez",
+                "company": "Glow Skincare CO",
+                "email": "laura@glowskincare.co",
+                "whatsapp": "+573001112233",
+                "wants_meeting": True,
+            },
+        )
+        self.assertEqual(status, 201)
+        lead_id = json.loads(lead_body)["lead"]["id"]
+
+        # Also test moving an outbound prospect to interesado_cita cancels its pending outbox jobs
+        self._req(
+            "/api/admin/prospects/import-csv",
+            method="POST",
+            payload={
+                "csv_text": "nombre,empresa,correo,industria,servicio\nCarlos,Marca X,carlos@marcax.co,Moda,TikTok Ads\n"
+            },
+        )
+        _, leads_data = self._req("/api/leads?search=carlos@marcax.co")
+        carlos_id = json.loads(leads_data)["leads"][0]["id"]
+        self._req(f"/api/leads/{carlos_id}", method="PATCH", payload={"stage": "interesado_cita"})
+
+        _, citas_body = self._req("/api/admin/citas")
+        citas = json.loads(citas_body)["citas"]
+        emails = {c["email"] for c in citas}
+        self.assertIn("laura@glowskincare.co", emails)
+        self.assertIn("carlos@marcax.co", emails)
+        self.assertTrue(any(c["id"] == lead_id and c["direct_mailto_url"].startswith("mailto:") for c in citas))
+
+        _, csv_body = self._req("/api/admin/citas.csv")
+        self.assertIn("laura@glowskincare.co", csv_body)
+        self.assertIn("carlos@marcax.co", csv_body)
+
+        _, outbox_body = self._req("/api/admin/outbox")
+        carlos_jobs = [j for j in json.loads(outbox_body)["jobs"] if j["recipient"] == "carlos@marcax.co"]
+        self.assertTrue(carlos_jobs)
+        self.assertTrue(all(j["status"] == "cancelled" for j in carlos_jobs))
+
 
 if __name__ == "__main__":
     unittest.main()

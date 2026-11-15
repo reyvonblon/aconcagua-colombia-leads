@@ -4,14 +4,19 @@
 from __future__ import annotations
 
 import argparse
+import email
+import imaplib
 import json
 import os
+import re
 import smtplib
 import sys
 import threading
 import urllib.request
 from datetime import datetime
+from email.header import decode_header
 from email.message import EmailMessage
+from email.utils import parseaddr
 from pathlib import Path
 
 _DISPATCH_LOCK = threading.Lock()
@@ -175,9 +180,193 @@ def dispatch_due_jobs() -> dict:
         }
 
 
+def _decode_mime_header(raw_val: str) -> str:
+    if not raw_val:
+        return ""
+    parts = decode_header(raw_val)
+    decoded: list[str] = []
+    for chunk, enc in parts:
+        if isinstance(chunk, bytes):
+            decoded.append(chunk.decode(enc or "utf-8", errors="replace"))
+        else:
+            decoded.append(str(chunk))
+    return "".join(decoded).strip()
+
+
+def _extract_text_snippet(msg: email.message.Message) -> str:
+    if msg.is_multipart():
+        for part in msg.walk():
+            ctype = part.get_content_type()
+            disp = str(part.get("Content-Disposition") or "")
+            if ctype == "text/plain" and "attachment" not in disp.lower():
+                payload = part.get_payload(decode=True)
+                if payload:
+                    charset = part.get_content_charset() or "utf-8"
+                    return payload.decode(charset, errors="replace").strip()[:400]
+    else:
+        payload = msg.get_payload(decode=True)
+        if payload:
+            charset = msg.get_content_charset() or "utf-8"
+            return payload.decode(charset, errors="replace").strip()[:400]
+    return ""
+
+
+def classify_reply_intent(subject: str, body: str) -> str:
+    """Classify an inbound lead reply as interesado_cita, no_interesado, or respuesta_recibida."""
+    text = re.sub(r"\s+", " ", f"{subject} {body}".lower()).strip()
+    negative_kw = (
+        "no gracias",
+        "no estamos interesados",
+        "no nos interesa",
+        "no interesa",
+        "dar de baja",
+        "remover",
+        "unsubscribe",
+        "dejar de escribir",
+        "no me escriban",
+    )
+    if any(kw in text for kw in negative_kw):
+        return "no_interesado"
+
+    positive_kw = (
+        "cita",
+        "reunión",
+        "reunion",
+        "agendar",
+        "llamada",
+        "auditoría",
+        "auditoria",
+        "disponibilidad",
+        "cuándo",
+        "cuando",
+        "hora",
+        "interesado",
+        "interesada",
+        "interesa",
+        "con gusto",
+        "cotización",
+        "cotizacion",
+        "propuesta",
+        "hablemos",
+        "conversemos",
+        "zoom",
+        "meet",
+        "calendario",
+        "whatsapp",
+        "teléfono",
+        "telefono",
+        "sí claro",
+        "si claro",
+    )
+    if any(kw in text for kw in positive_kw):
+        return "interesado_cita"
+    return "respuesta_recibida"
+
+
+def sync_imap_replies(max_messages: int = 40) -> dict[str, object]:
+    """Scan Gmail/IMAP inbox for replies from tracked leads and flag interested leads for direct contact."""
+    with _DISPATCH_LOCK:
+        database.init_db()
+        cfg = load_env_file()
+        user = cfg.get("SMTP_USER", "")
+        password = cfg.get("SMTP_PASS", "")
+        imap_host = cfg.get("IMAP_HOST") or ("imap.gmail.com" if "gmail" in (cfg.get("SMTP_HOST") or "").lower() else "")
+        if not (user and password and imap_host):
+            return {"imap_ready": False, "checked": 0, "matched": 0, "interested_citas": []}
+
+        matched = 0
+        interested_citas: list[dict[str, str]] = []
+        checked = 0
+        try:
+            with imaplib.IMAP4_SSL(imap_host, 993, timeout=15) as imap:
+                imap.login(user, password)
+                imap.select("INBOX")
+                status_code, data = imap.search(None, "ALL")
+                if status_code != "OK" or not data or not data[0]:
+                    return {"imap_ready": True, "checked": 0, "matched": 0, "interested_citas": []}
+                msg_ids = data[0].split()[-max_messages:]
+                for msg_num in reversed(msg_ids):
+                    checked += 1
+                    st, msg_data = imap.fetch(msg_num, "(RFC822)")
+                    if st != "OK" or not msg_data or not isinstance(msg_data[0], tuple):
+                        continue
+                    msg = email.message_from_bytes(msg_data[0][1])
+                    msg_id = (msg.get("Message-ID") or "").strip() or f"imap-{msg_num.decode(errors='ignore')}"
+                    if database.has_processed_reply(msg_id):
+                        continue
+                    _, sender_email = parseaddr(msg.get("From") or "")
+                    sender_email = sender_email.strip().lower()
+                    if not sender_email or sender_email == user.lower():
+                        continue
+                    lead = database.get_lead_by_email(sender_email)
+                    if not lead:
+                        continue
+
+                    subj = _decode_mime_header(msg.get("Subject") or "")
+                    snippet = _extract_text_snippet(msg)
+                    intent = classify_reply_intent(subj, snippet)
+                    database.record_processed_reply(msg_id, sender_email, intent, snippet)
+                    matched += 1
+
+                    stamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+                    prev_notes = (lead.get("notes") or "").strip()
+                    new_note = f"[Respuesta {stamp} | {intent}] Asunto: {subj} — {snippet[:220]}"
+                    merged_notes = f"{new_note}\n{prev_notes}".strip() if prev_notes else new_note
+                    next_stage = intent if intent in ("interesado_cita", "no_interesado") else lead["stage"]
+                    database.update_lead_stage(lead["id"], next_stage, notes=merged_notes)
+                    database.cancel_pending_outbox_for_recipient(sender_email)
+
+                    if intent == "interesado_cita":
+                        interested_citas.append(
+                            {
+                                "name": lead["name"],
+                                "company": lead["company"],
+                                "email": sender_email,
+                                "snippet": snippet[:180],
+                            }
+                        )
+                        notify_to = cfg.get("SMTP_REPLY_TO") or ""
+                        if notify_to and cfg.get("SMTP_HOST"):
+                            try:
+                                send_smtp_email(
+                                    cfg,
+                                    notify_to,
+                                    f"Lead listo para agendar cita: {lead['company'] or lead['name']}",
+                                    (
+                                        f"Hola Raymond,\n\n"
+                                        f"El siguiente lead respondió interesado en agendar cita y ya quedó "
+                                        f"separado en tu lista 'Leads para Agendar Cita':\n\n"
+                                        f"- Nombre: {lead['name']}\n"
+                                        f"- Empresa: {lead['company'] or 'N/A'}\n"
+                                        f"- Correo: {sender_email}\n"
+                                        f"- WhatsApp: {lead['whatsapp'] or 'No registrado'}\n"
+                                        f"- Respuesta: {snippet[:300]}\n\n"
+                                        "Puedes contactarlo directamente desde tu correo corporativo.\n"
+                                    ),
+                                )
+                            except Exception:
+                                pass
+        except Exception as exc:
+            return {
+                "imap_ready": True,
+                "error": str(exc),
+                "checked": checked,
+                "matched": matched,
+                "interested_citas": interested_citas,
+            }
+
+        return {
+            "imap_ready": True,
+            "checked": checked,
+            "matched": matched,
+            "interested_citas": interested_citas,
+        }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Dispatch due Aconcagua Colombia corporate emails.")
     parser.add_argument("--status-only", action="store_true", help="Only inspect credentials and pending count.")
+    parser.add_argument("--sync-replies", action="store_true", help="Scan IMAP inbox for interested replies.")
     args = parser.parse_args()
 
     database.init_db()
@@ -192,6 +381,9 @@ def main() -> None:
                 indent=2,
             )
         )
+        return
+    if args.sync_replies:
+        print(json.dumps(sync_imap_replies(), ensure_ascii=False, indent=2))
         return
     print(json.dumps(dispatch_due_jobs(), ensure_ascii=False, indent=2))
 

@@ -88,6 +88,15 @@ def init_db() -> None:
                 error TEXT DEFAULT '',
                 created_at TEXT NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS reply_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                message_id TEXT NOT NULL UNIQUE,
+                sender_email TEXT NOT NULL,
+                intent TEXT NOT NULL,
+                snippet TEXT DEFAULT '',
+                created_at TEXT NOT NULL
+            );
             """
         )
 
@@ -466,6 +475,75 @@ def list_leads(search: str = "", stage: str = "") -> list[dict[str, Any]]:
         conn.close()
 
 
+def cancel_pending_outbox_for_recipient(email: str) -> int:
+    clean_email = (email or "").strip().lower()
+    if not clean_email:
+        return 0
+    init_db()
+    conn = get_connection()
+    try:
+        cur = conn.execute(
+            "UPDATE outbox_jobs SET status = 'cancelled', error = 'Lead respondió o cambió de etapa' "
+            "WHERE LOWER(recipient) = ? AND status = 'pending'",
+            (clean_email,),
+        )
+        conn.commit()
+        return int(cur.rowcount or 0)
+    finally:
+        conn.close()
+
+
+def get_lead_by_email(email: str) -> dict[str, Any] | None:
+    clean_email = (email or "").strip().lower()
+    if not clean_email:
+        return None
+    init_db()
+    conn = get_connection()
+    try:
+        row = conn.execute("SELECT * FROM leads WHERE LOWER(email) = ?", (clean_email,)).fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
+
+def list_appointment_leads() -> list[dict[str, Any]]:
+    init_db()
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT * FROM leads WHERE stage IN ('interesado_cita', 'reunion_agendada') ORDER BY updated_at DESC"
+        ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def has_processed_reply(message_id: str) -> bool:
+    if not message_id:
+        return False
+    init_db()
+    conn = get_connection()
+    try:
+        row = conn.execute("SELECT 1 FROM reply_logs WHERE message_id = ?", (message_id,)).fetchone()
+        return row is not None
+    finally:
+        conn.close()
+
+
+def record_processed_reply(message_id: str, sender_email: str, intent: str, snippet: str = "") -> None:
+    init_db()
+    conn = get_connection()
+    try:
+        conn.execute(
+            "INSERT OR IGNORE INTO reply_logs (message_id, sender_email, intent, snippet, created_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (message_id, sender_email.lower(), intent, snippet[:500], now_iso()),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def update_lead_stage(lead_id: int, stage: str, notes: str | None = None) -> dict[str, Any] | None:
     init_db()
     conn = get_connection()
@@ -482,9 +560,12 @@ def update_lead_stage(lead_id: int, stage: str, notes: str | None = None) -> dic
             )
         conn.commit()
         row = conn.execute("SELECT * FROM leads WHERE id = ?", (lead_id,)).fetchone()
-        return dict(row) if row else None
+        lead = dict(row) if row else None
     finally:
         conn.close()
+    if lead and stage in ("interesado_cita", "reunion_agendada", "no_interesado"):
+        cancel_pending_outbox_for_recipient(lead.get("email", ""))
+    return lead
 
 
 def get_qr_context(slug: str) -> dict[str, Any]:
@@ -572,10 +653,13 @@ def get_dashboard_metrics() -> dict[str, Any]:
             (f"{today_prefix}%",),
         ).fetchone()["c"]
         qualified_count = conn.execute(
-            "SELECT COUNT(*) AS c FROM leads WHERE stage IN ('diagnostico_enviado', 'reunion_agendada', 'propuesta', 'cerrado_ganado')"
+            "SELECT COUNT(*) AS c FROM leads WHERE stage IN ('diagnostico_enviado', 'interesado_cita', 'reunion_agendada', 'propuesta', 'cerrado_ganado')"
         ).fetchone()["c"]
         meetings_count = conn.execute(
-            "SELECT COUNT(*) AS c FROM leads WHERE stage IN ('reunion_agendada', 'propuesta', 'cerrado_ganado')"
+            "SELECT COUNT(*) AS c FROM leads WHERE stage IN ('interesado_cita', 'reunion_agendada', 'propuesta', 'cerrado_ganado')"
+        ).fetchone()["c"]
+        interested_citas_count = conn.execute(
+            "SELECT COUNT(*) AS c FROM leads WHERE stage IN ('interesado_cita', 'reunion_agendada')"
         ).fetchone()["c"]
         qr_scans = conn.execute("SELECT COUNT(*) AS c FROM qr_events").fetchone()["c"]
         qr_by_slug = [
@@ -594,6 +678,7 @@ def get_dashboard_metrics() -> dict[str, Any]:
             "leads_today": leads_today,
             "qualified_count": qualified_count,
             "meetings_count": meetings_count,
+            "interested_citas_count": interested_citas_count,
             "qr_scans": qr_scans,
             "qr_by_slug": qr_by_slug,
             "pending_emails": pending_emails,

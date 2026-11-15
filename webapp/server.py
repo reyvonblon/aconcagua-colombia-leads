@@ -250,6 +250,71 @@ class AconcaguaHandler(BaseHTTPRequestHandler):
             )
             return
 
+        if path == "/api/admin/citas":
+            citas = database.list_appointment_leads()
+            for item in citas:
+                target_num = item.get("whatsapp") or ""
+                item["whatsapp_chat_url"] = (
+                    build_whatsapp_url(
+                        target_num,
+                        f"Hola {item['name']}, te escribe Raymond de Aconcagua Agency Colombia. "
+                        f"Vi tu interés en agendar nuestra auditoría para {item['company'] or 'tu marca'}. ¿Qué horario te queda mejor?",
+                    )
+                    if target_num
+                    else ""
+                )
+                item["direct_mailto_url"] = build_mailto_url(
+                    item.get("email", ""),
+                    f"Agendar auditoría — Aconcagua Agency x {item['company'] or item['name']}",
+                    (
+                        f"Hola {item['name']},\n\n"
+                        f"Muchas gracias por tu interés en revisar la auditoría digital y comercial para {item['company'] or 'tu marca'}.\n\n"
+                        "¿Qué día y horario te funciona mejor esta semana para una llamada breve de 15–20 minutos?\n\n"
+                        "Quedo atento,\n"
+                        "Raymond Von Blon\n"
+                        "Ejecutivo de Cuentas — Aconcagua Agency Colombia"
+                    ),
+                )
+            self._send_json({"citas": citas, "count": len(citas)})
+            return
+
+        if path == "/api/admin/citas.csv":
+            citas = database.list_appointment_leads()
+            buf = io.StringIO()
+            writer = csv.writer(buf)
+            writer.writerow(
+                [
+                    "ID",
+                    "Nombre",
+                    "Empresa",
+                    "Correo",
+                    "WhatsApp",
+                    "Industria",
+                    "Servicio",
+                    "Etapa",
+                    "Notas_y_Respuesta",
+                    "Actualizado",
+                ]
+            )
+            for l in citas:
+                writer.writerow(
+                    [
+                        l["id"],
+                        l["name"],
+                        l["company"],
+                        l["email"],
+                        l["whatsapp"],
+                        l["industry"],
+                        l["service_interest"],
+                        l["stage"],
+                        l["notes"],
+                        l["updated_at"],
+                    ]
+                )
+            data = ("\ufeff" + buf.getvalue()).encode("utf-8")
+            self._send_bytes(data, "text/csv; charset=utf-8", filename="leads_agendar_cita_aconcagua.csv")
+            return
+
         self._send_json({"error": "Ruta GET no encontrada"}, status=HTTPStatus.NOT_FOUND)
 
     def do_POST(self) -> None:
@@ -262,6 +327,7 @@ class AconcaguaHandler(BaseHTTPRequestHandler):
 
         if path == "/api/leads":
             try:
+                stage = "interesado_cita" if data.get("wants_meeting") else data.get("stage", "nuevo_lead")
                 lead = database.upsert_lead(
                     name=data.get("name", ""),
                     company=data.get("company", ""),
@@ -271,7 +337,7 @@ class AconcaguaHandler(BaseHTTPRequestHandler):
                     service_interest=data.get("service_interest", ""),
                     monthly_budget=data.get("monthly_budget", ""),
                     source=data.get("source", "landing"),
-                    stage=data.get("stage", "nuevo_lead"),
+                    stage=stage,
                     notes=data.get("notes", ""),
                     queue_type="inbound",
                 )
@@ -284,6 +350,7 @@ class AconcaguaHandler(BaseHTTPRequestHandler):
         if path == "/api/diagnostico/submit":
             evaluation = database.evaluate_diagnostic(data)
             try:
+                stage = "interesado_cita" if data.get("wants_meeting") else "diagnostico_enviado"
                 lead = database.upsert_lead(
                     name=data.get("name", ""),
                     company=data.get("company", ""),
@@ -293,7 +360,7 @@ class AconcaguaHandler(BaseHTTPRequestHandler):
                     service_interest=evaluation["recommended_primary"],
                     monthly_budget=data.get("monthly_budget", ""),
                     source="diagnostico",
-                    stage="diagnostico_enviado",
+                    stage=stage,
                     notes=evaluation["summary"],
                     queue_type="inbound",
                 )
@@ -338,6 +405,10 @@ class AconcaguaHandler(BaseHTTPRequestHandler):
             self._send_json(autopilot_dispatcher.dispatch_due_jobs())
             return
 
+        if path == "/api/admin/replies/sync":
+            self._send_json(autopilot_dispatcher.sync_imap_replies())
+            return
+
         self._send_json({"error": "Ruta POST no encontrada"}, status=HTTPStatus.NOT_FOUND)
 
     def do_PATCH(self) -> None:
@@ -380,6 +451,8 @@ def _start_autopilot_worker(interval_seconds: int) -> threading.Event:
         while not stop_event.wait(interval_seconds):
             try:
                 status = autopilot_dispatcher.get_autopilot_status()
+                if status.get("smtp_ready"):
+                    autopilot_dispatcher.sync_imap_replies()
                 if status.get("smtp_ready") or status.get("lead_webhook_ready"):
                     autopilot_dispatcher.dispatch_due_jobs()
             except Exception:

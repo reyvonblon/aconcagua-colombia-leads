@@ -39,6 +39,34 @@
       </div>
     </div>
 
+    <!-- DEDICATED APPOINTMENT HANDOFF QUEUE -->
+    <section class="card" style="margin-bottom:18px; border: 2px solid #2563eb;">
+      <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:10px;">
+        <div>
+          <h2 style="margin:0;">Leads Interesados en Agendar Cita (Contactar Directamente)</h2>
+          <div class="muted small">Aquí aparecen aparte solo los leads que respondieron pidiendo cita/auditoría o solicitaron llamada directa.</div>
+        </div>
+        <div class="btn-row">
+          <button id="btn-sync-replies" class="btn btn-sm" type="button">Sincronizar Respuestas (Gmail)</button>
+          <a href="/api/admin/citas.csv" class="btn btn-secondary btn-sm">Descargar CSV de Citas</a>
+        </div>
+      </div>
+      <div id="citas-msg" style="margin-bottom:8px;"></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Empresa / Contacto</th>
+              <th>Respuesta / Interés</th>
+              <th>Etapa</th>
+              <th>Contacto Directo</th>
+            </tr>
+          </thead>
+          <tbody id="citas-body"></tbody>
+        </table>
+      </div>
+    </section>
+
     <div class="tabs">
       <button class="tab-btn active" data-tab="tab-leads">1. Pipeline de Clientes</button>
       <button class="tab-btn" data-tab="tab-outreach">2. Prospección Automática (CSV + Correo)</button>
@@ -60,9 +88,11 @@
           <option value="">Todas las etapas</option>
           <option value="nuevo_lead">Nuevo lead</option>
           <option value="diagnostico_enviado">Diagnóstico enviado</option>
+          <option value="interesado_cita">Interesado en cita</option>
           <option value="reunion_agendada">Reunión agendada</option>
           <option value="propuesta">Propuesta enviada</option>
           <option value="cerrado_ganado">Cliente cerrado</option>
+          <option value="no_interesado">No interesado</option>
         </select>
       </div>
 
@@ -176,6 +206,27 @@ Laura Gómez,Clínica Aura Bogotá,gerencia@clinicaaura.co,+573001112233,Salud y
       `).join("");
     }
 
+    async function loadCitas() {
+      const data = await apiJson("/api/admin/citas");
+      const tbody = document.getElementById("citas-body");
+      tbody.innerHTML = (data.citas || []).map(l => `
+        <tr>
+          <td>
+            <strong>${escapeHtml(l.company || l.name)}</strong> · ${escapeHtml(l.name)}<br/>
+            <span class="muted small">${escapeHtml(l.email)} ${l.whatsapp ? `· ${escapeHtml(l.whatsapp)}` : ""}</span>
+          </td>
+          <td class="small">${escapeHtml((l.notes || l.service_interest || "-").slice(0, 220))}</td>
+          <td><span class="badge">${escapeHtml(l.stage.replaceAll("_", " "))}</span></td>
+          <td>
+            <div class="btn-row">
+              <a href="${l.direct_mailto_url}" class="btn btn-sm">Agendar por Correo</a>
+              ${l.whatsapp_chat_url ? `<a href="${l.whatsapp_chat_url}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">WhatsApp</a>` : ""}
+            </div>
+          </td>
+        </tr>
+      `).join("") || `<tr><td colspan="4" class="muted">Aún no hay leads interesados en agendar cita. Haz clic en "Sincronizar Respuestas (Gmail)" para revisar nuevos correos.</td></tr>`;
+    }
+
     async function loadLeads() {
       const search = document.getElementById("f-search").value;
       const stage = document.getElementById("f-stage").value;
@@ -197,7 +248,7 @@ Laura Gómez,Clínica Aura Bogotá,gerencia@clinicaaura.co,+573001112233,Salud y
           <td><span class="badge">${escapeHtml(l.source)}</span></td>
           <td>
             <select data-lead-id="${l.id}" class="stage-sel" style="margin:0; padding:6px;">
-              ${["nuevo_lead", "diagnostico_enviado", "reunion_agendada", "propuesta", "cerrado_ganado"].map(s => `
+              ${["nuevo_lead", "diagnostico_enviado", "interesado_cita", "reunion_agendada", "propuesta", "cerrado_ganado", "no_interesado"].map(s => `
                 <option value="${s}" ${l.stage === s ? "selected" : ""}>${s.replaceAll("_", " ")}</option>
               `).join("")}
             </select>
@@ -215,6 +266,7 @@ Laura Gómez,Clínica Aura Bogotá,gerencia@clinicaaura.co,+573001112233,Salud y
             body: { stage: sel.value }
           });
           loadDashboard();
+          loadCitas();
         });
       });
     }
@@ -239,6 +291,21 @@ Laura Gómez,Clínica Aura Bogotá,gerencia@clinicaaura.co,+573001112233,Salud y
 
     document.getElementById("f-search").addEventListener("input", loadLeads);
     document.getElementById("f-stage").addEventListener("change", loadLeads);
+
+    document.getElementById("btn-sync-replies").addEventListener("click", async () => {
+      const msgEl = document.getElementById("citas-msg");
+      try {
+        const res = await apiJson("/api/admin/replies/sync", { method: "POST", body: {} });
+        const citasCount = (res.interested_citas || []).length;
+        showNotice(msgEl, `Bandeja revisada: ${res.checked || 0} correos · Respuestas de leads: ${res.matched || 0} · Nuevos listos para cita: ${citasCount}.`);
+        loadCitas();
+        loadLeads();
+        loadOutbox();
+        loadDashboard();
+      } catch (err) {
+        showNotice(msgEl, err.message, true);
+      }
+    });
 
     document.getElementById("btn-import-csv").addEventListener("click", async () => {
       const msgEl = document.getElementById("outreach-msg");
@@ -288,6 +355,7 @@ Laura Gómez,Clínica Aura Bogotá,gerencia@clinicaaura.co,+573001112233,Salud y
     });
 
     loadDashboard();
+    loadCitas();
     loadLeads();
     loadOutbox();
   </script>
