@@ -38,6 +38,11 @@ def build_whatsapp_url(raw_number: str, message: str) -> str:
     return f"https://wa.me/?text={encoded}"
 
 
+def build_mailto_url(email: str, subject: str, body: str) -> str:
+    target = (email or "raymondvonblon@aconcagua.agency").strip()
+    return f"mailto:{target}?subject={quote(subject)}&body={quote(body)}"
+
+
 class AconcaguaHandler(BaseHTTPRequestHandler):
     server_version = "AconcaguaColombiaStudio/1.0"
 
@@ -124,14 +129,20 @@ class AconcaguaHandler(BaseHTTPRequestHandler):
         if path == "/api/config":
             settings = database.get_settings()
             profile = database.load_agency_profile()
+            corp_email = settings.get("corporate_email") or "raymondvonblon@aconcagua.agency"
             self._send_json(
                 {
                     "settings": settings,
                     "services": profile.get("services", []),
+                    "mailto_url": build_mailto_url(
+                        corp_email,
+                        "Consulta servicios Aconcagua Agency Colombia",
+                        "Hola Raymond,\n\nQuiero recibir información y diagnóstico para escalar mi marca en Colombia.",
+                    ),
                     "whatsapp_direct_url": build_whatsapp_url(
                         settings.get("whatsapp_number", ""),
                         "Hola, quiero información sobre los servicios de Aconcagua Agency en Colombia.",
-                    ),
+                    ) if settings.get("whatsapp_number") else "",
                 }
             )
             return
@@ -140,6 +151,7 @@ class AconcaguaHandler(BaseHTTPRequestHandler):
             slug = path[len("/api/qr/"):].strip("/") or "ig"
             ctx = database.get_qr_context(slug)
             settings = database.get_settings()
+            corp_email = settings.get("corporate_email") or "raymondvonblon@aconcagua.agency"
             msg = (
                 f"Hola! Vengo desde '{ctx['channel_ref']}' de Aconcagua Agency Colombia "
                 "y quiero solicitar un diagnóstico para mi marca."
@@ -147,7 +159,8 @@ class AconcaguaHandler(BaseHTTPRequestHandler):
             self._send_json(
                 {
                     "qr": ctx,
-                    "whatsapp_url": build_whatsapp_url(settings.get("whatsapp_number", ""), msg),
+                    "mailto_url": build_mailto_url(corp_email, f"Contacto Aconcagua ({ctx['channel_ref']})", msg),
+                    "whatsapp_url": build_whatsapp_url(settings.get("whatsapp_number", ""), msg) if settings.get("whatsapp_number") else "",
                     "settings": settings,
                 }
             )
@@ -288,6 +301,7 @@ class AconcaguaHandler(BaseHTTPRequestHandler):
                 self._send_json({"error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
                 return
             settings = database.get_settings()
+            corp_email = settings.get("corporate_email") or "raymondvonblon@aconcagua.agency"
             wa_msg = (
                 f"Hola! Acabo de hacer el diagnóstico de Aconcagua Colombia para {lead['company'] or lead['name']}. "
                 f"Me recomendó: {evaluation['recommended_primary']}."
@@ -296,7 +310,12 @@ class AconcaguaHandler(BaseHTTPRequestHandler):
                 {
                     "lead": lead,
                     "evaluation": evaluation,
-                    "whatsapp_url": build_whatsapp_url(settings.get("whatsapp_number", ""), wa_msg),
+                    "mailto_url": build_mailto_url(
+                        corp_email,
+                        f"Diagnóstico Aconcagua — {lead['company'] or lead['name']}",
+                        wa_msg,
+                    ),
+                    "whatsapp_url": build_whatsapp_url(settings.get("whatsapp_number", ""), wa_msg) if settings.get("whatsapp_number") else "",
                 },
                 status=HTTPStatus.CREATED,
             )

@@ -32,12 +32,12 @@
         </p>
         <div class="btn-row">
           <a href="/diagnostico" class="btn">Hacer Diagnóstico Gratuito (2 min)</a>
-          <a id="hero-whatsapp" href="https://wa.me/" target="_blank" rel="noopener" class="btn btn-secondary">
-            Hablar por WhatsApp Colombia
+          <a id="hero-contact" href="mailto:raymondvonblon@aconcagua.agency" class="btn btn-secondary">
+            Escribir por Correo Corporativo
           </a>
         </div>
         <p class="muted small" style="margin-top:14px;">
-          Atención directa en Colombia · Estrategia regional conectada con @aconcagua.agency
+          Atención directa en Colombia (raymondvonblon@aconcagua.agency) · @aconcagua.agency
         </p>
       </div>
 
@@ -54,16 +54,16 @@
           <label for="lead-email">Correo corporativo o personal *</label>
           <input id="lead-email" type="email" required placeholder="gerencia@tuempresa.com" />
 
-          <label for="lead-whatsapp">WhatsApp (+57...)</label>
+          <label for="lead-whatsapp">Tu teléfono o WhatsApp (opcional)</label>
           <input id="lead-whatsapp" placeholder="+57 300 000 0000" />
 
           <label for="lead-service">¿Qué necesitas escalar primero?</label>
           <select id="lead-service">
-            <option value="Performance & Paid Media (Meta / Google / TikTok Ads)">Meta Ads, Google Ads o TikTok Ads (más ventas/leads)</option>
-            <option value="Influencer & UGC Marketing">Marketing con Creadores e Influencers (UGC)</option>
-            <option value="Social Media & Contenido">Redes Sociales y Contenido Audiovisual</option>
-            <option value="SEO & Visibilidad en IA (GEO)">Posicionamiento SEO y Buscadores IA</option>
-            <option value="Web, Apps & Transformación Digital">Página Web / Landing Page de Conversión</option>
+            <option value="Marketing Digital (Meta / Google / TikTok Ads)">Meta Ads, Google Ads o TikTok Ads (más ventas/leads)</option>
+            <option value="Posicionamiento en IA (GEO) & SEO">Posicionamiento en ChatGPT / IA (GEO) y Google SEO</option>
+            <option value="Gestión de Influencers & Creadores UGC">Marketing con Creadores e Influencers (UGC)</option>
+            <option value="Gestión de Redes Sociales">Redes Sociales y Contenido Audiovisual</option>
+            <option value="Desarrollo Web / App & Aconcagua Labs">Página Web / Landing Page de Conversión</option>
           </select>
 
           <label for="lead-budget">Inversión mensual estimada en pauta/marketing</label>
@@ -81,7 +81,7 @@
     </section>
 
     <section style="margin-top: 18px;">
-      <h2>Nuestros 5 Pilares de Crecimiento</h2>
+      <h2>Nuestras Soluciones Digitales</h2>
       <div id="services-grid" class="grid-3"></div>
     </section>
   </main>
@@ -91,8 +91,15 @@
     async function initLanding() {
       try {
         const cfg = await apiJson("/api/config");
-        const waBtn = document.getElementById("hero-whatsapp");
-        if (cfg.whatsapp_direct_url) waBtn.href = cfg.whatsapp_direct_url;
+        const contactBtn = document.getElementById("hero-contact");
+        if (cfg.whatsapp_direct_url) {
+          contactBtn.href = cfg.whatsapp_direct_url;
+          contactBtn.textContent = "Hablar por WhatsApp Colombia";
+          contactBtn.target = "_blank";
+        } else if (cfg.mailto_url) {
+          contactBtn.href = cfg.mailto_url;
+          contactBtn.textContent = "Escribir al Correo Corporativo";
+        }
         if (cfg.settings?.instagram_url) document.getElementById("nav-ig").href = cfg.settings.instagram_url;
 
         const grid = document.getElementById("services-grid");

@@ -212,56 +212,60 @@ def _queue_outbound_sequence(
     industry: str,
     service_interest: str,
 ) -> None:
-    first_name = (name or "").split()[0] if name else ""
-    greeting = f"Hola {first_name}," if first_name else "Hola,"
-    company_txt = company or "tu empresa"
-    industry_txt = f" en el sector {industry}" if industry else " en Colombia"
-    service_txt = service_interest or "Meta/Google Ads y contenido con creadores UGC"
+    company_txt = company or "tu marca"
+    industry_txt = f" en {industry}" if industry else " en Colombia"
+    service_txt = service_interest or "Meta/TikTok Ads, creadores UGC y posicionamiento en Google/IA (GEO)"
 
     _queue_email(
         conn,
         recipient=email,
-        subject=f"Idea de crecimiento para {company_txt} — Aconcagua Agency Colombia",
+        subject=f"Idea rápida para escalar ventas de {company_txt} en Colombia",
         body=(
-            f"{greeting}\n\n"
-            f"Te saludo desde el equipo de Aconcagua Agency en Colombia (@aconcagua.agency). "
-            f"Estuvimos revisando marcas{industry_txt} y vimos potencial claro para escalar ventas "
-            f"de {company_txt} con {service_txt}.\n\n"
-            "Trabajamos con marcas en Latinoamérica combinando campañas de performance medibles, "
-            "creadores de contenido (UGC) y optimización de conversión.\n\n"
-            "¿Te gustaría que te enviemos un diagnóstico corto de 3 puntos sin compromiso para "
-            f"{company_txt}? Solo respóndeme 'Sí' a este correo.\n\n"
+            f"Hola equipo de {company_txt},\n\n"
+            "Soy Raymond Von Blon, representante en Colombia de Aconcagua Agency (https://aconcagua.agency · @aconcagua.agency).\n\n"
+            f"Ayudamos a marcas{industry_txt} a escalar ventas combinando:\n"
+            f"- {service_txt}\n"
+            "- Posicionamiento en IA (GEO): para que ChatGPT, Gemini y Google recomienden tu marca.\n"
+            "- Contenido con creadores UGC orientado a conversión.\n\n"
+            "Si les interesa, les preparo un diagnóstico corto de 3 puntos sin costo para su marca.\n"
+            "¿Les parece si les envío el resumen por aquí o prefieren agendar 15 min?\n\n"
+            "También pueden hacerlo en 2 minutos aquí:\n"
+            "https://aconcagua-colombia-leads.onrender.com/diagnostico\n\n"
             "Un saludo,\n"
-            "Representante de Cuentas — Colombia\n"
-            "Aconcagua Agency"
+            "Raymond Von Blon\n"
+            "Representante de Cuentas Colombia — Aconcagua Agency\n"
+            "raymondvonblon@aconcagua.agency"
         ),
         delay_hours=0,
     )
     _queue_email(
         conn,
         recipient=email,
-        subject=f"Re: Idea de crecimiento para {company_txt}",
+        subject=f"Re: Idea rápida para {company_txt}",
         body=(
-            f"{greeting}\n\n"
-            f"Te comparto un breve seguimiento sobre {company_txt}. Muchos negocios{industry_txt} "
-            "pierden presupuesto en anuncios sin una estructura clara de creativos UGC y embudo a WhatsApp.\n\n"
-            "Si te sirve, agendamos 15 minutos esta semana y te muestro cómo lo estructuramos en Aconcagua.\n\n"
-            "Un saludo,\n"
-            "Aconcagua Agency Colombia"
+            f"Hola equipo de {company_txt},\n\n"
+            "Paso brevemente por si no vieron mi correo anterior.\n\n"
+            "En Aconcagua trabajamos con marcas de beauty, skincare, moda y consumo en Latinoamérica "
+            "conectando pauta medible (Meta/Google/TikTok Ads) con creadores UGC y GEO en buscadores de IA.\n\n"
+            "Si quieren ver 3 oportunidades rápidas para su tienda/marca en Colombia, solo respóndanme este correo.\n\n"
+            "Saludos,\n"
+            "Raymond Von Blon · Aconcagua Agency Colombia\n"
+            "raymondvonblon@aconcagua.agency"
         ),
         delay_hours=72,
     )
     _queue_email(
         conn,
         recipient=email,
-        subject=f"Cierro seguimiento por ahora — {company_txt}",
+        subject=f"Cierro por ahora — {company_txt}",
         body=(
-            f"{greeting}\n\n"
-            "No quiero saturar tu bandeja, así que este es mi último mensaje por ahora.\n"
-            f"Cuando {company_txt} quiera escalar adquisición de clientes en Colombia con pauta o creadores, "
-            "aquí tienes mi contacto directo.\n\n"
-            "Mucho éxito,\n"
-            "Representante de Cuentas — Aconcagua Agency Colombia"
+            f"Hola equipo de {company_txt},\n\n"
+            "No quiero saturar su bandeja, así que dejo este último mensaje por si más adelante "
+            "buscan escalar ventas en Colombia con pauta, creadores UGC o SEO/GEO.\n\n"
+            "Aquí tienen mi contacto directo.\n\n"
+            "Éxitos,\n"
+            "Raymond Von Blon · Aconcagua Agency Colombia\n"
+            "raymondvonblon@aconcagua.agency"
         ),
         delay_hours=168,
     )

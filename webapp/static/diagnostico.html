@@ -77,7 +77,7 @@
 
       <div id="diag-result" class="notice hidden" style="margin-top:18px;"></div>
       <div id="diag-actions" class="btn-row hidden" style="margin-top:12px;">
-        <a id="diag-wa" href="#" target="_blank" rel="noopener" class="btn btn-amber">Hablar ahora por WhatsApp Colombia</a>
+        <a id="diag-contact" href="mailto:raymondvonblon@aconcagua.agency" class="btn btn-amber">Escribir al Correo Corporativo</a>
         <a href="/" class="btn btn-secondary">Volver al inicio</a>
       </div>
     </div>
@@ -110,7 +110,15 @@
           <span class="small">También te enviamos este resumen a <strong>${escapeHtml(res.lead.email)}</strong>.</span>
         `;
         resEl.classList.remove("hidden", "error");
-        document.getElementById("diag-wa").href = res.whatsapp_url;
+        const contactBtn = document.getElementById("diag-contact");
+        if (res.whatsapp_url) {
+          contactBtn.href = res.whatsapp_url;
+          contactBtn.textContent = "Hablar ahora por WhatsApp Colombia";
+          contactBtn.target = "_blank";
+        } else if (res.mailto_url) {
+          contactBtn.href = res.mailto_url;
+          contactBtn.textContent = "Responder por Correo Corporativo";
+        }
         actEl.classList.remove("hidden");
       } catch (err) {
         showNotice(resEl, err.message, true);

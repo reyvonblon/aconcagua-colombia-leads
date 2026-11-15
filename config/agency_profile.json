@@ -14,34 +14,40 @@
   },
   "services": [
     {
-      "id": "performance_ads",
-      "name": "Performance & Paid Media",
-      "channels": "Meta Ads, Google Ads y TikTok Ads",
-      "summary": "Campañas enfocadas en retorno sobre inversión (ROAS), captación de leads calificados y ventas medibles."
+      "id": "marketing_digital",
+      "name": "Marketing Digital & Performance",
+      "channels": "Google Ads, Meta Ads y TikTok Ads",
+      "summary": "Campañas de publicidad digital orientadas a resultados concretos y retorno medible (ROAS) con estrategia data-driven."
     },
     {
-      "id": "influencer_ugc",
-      "name": "Influencer & UGC Marketing",
-      "channels": "Creadores de contenido, casting y negociación",
-      "summary": "Conectamos tu marca con creadores confiables para generar contenido auténtico que convierte."
+      "id": "geo_ia",
+      "name": "Posicionamiento en IA (GEO)",
+      "channels": "ChatGPT, Gemini, Claude y Perplexity",
+      "summary": "Hacemos que los motores de inteligencia artificial recomienden tu marca cuando tus clientes buscan soluciones."
     },
     {
-      "id": "social_content",
-      "name": "Social Media & Contenido",
-      "channels": "Instagram, TikTok, diseño audiovisual",
-      "summary": "Estrategia mensual, producción de piezas de alto impacto y gestión profesional de comunidad."
+      "id": "seo",
+      "name": "Posicionamiento SEO",
+      "channels": "Google Search Orgánico",
+      "summary": "SEO técnico, contenido estratégico y autoridad de marca para captar clientes sin depender solo de la pauta."
     },
     {
-      "id": "seo_geo",
-      "name": "SEO & Visibilidad en IA (GEO)",
-      "channels": "Google Search y motores de respuesta IA",
-      "summary": "Posicionamiento orgánico para que tus clientes te encuentren primero en Google y buscadores con IA."
+      "id": "influencers_ugc",
+      "name": "Influencers & Creadores UGC",
+      "channels": "Beauty, Skincare, Moda y Lifestyle",
+      "summary": "Estrategia, casting, negociación y contenido UGC con creadores en quienes tu audiencia ya confía."
     },
     {
-      "id": "web_consulting",
-      "name": "Web, Apps & Transformación Digital",
-      "channels": "Landing pages, e-commerce y consultoría",
-      "summary": "Activos digitales optimizados para conversión, automatización comercial y analítica."
+      "id": "redes_sociales",
+      "name": "Gestión de Redes Sociales",
+      "channels": "Instagram, TikTok y LinkedIn",
+      "summary": "Contenido estratégico, diseño audiovisual y crecimiento sostenido de comunidad."
+    },
+    {
+      "id": "desarrollo_web",
+      "name": "Desarrollo Web / App & Labs",
+      "channels": "Next.js, Landing Pages y E-commerce",
+      "summary": "Activos digitales a medida, veloces y orientados a conversión."
     }
   ],
   "qr_routes": {

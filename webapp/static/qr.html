@@ -13,7 +13,7 @@
       <h1 id="qr-title" style="font-size: 1.75rem;">Contacto Directo</h1>
       <p id="qr-channel" class="muted"></p>
       <div class="btn-row" style="justify-content: center; margin-top: 18px;">
-        <a id="qr-wa-btn" href="https://wa.me/" class="btn">Escribir por WhatsApp ahora</a>
+        <a id="qr-contact-btn" href="mailto:raymondvonblon@aconcagua.agency" class="btn">Escribir al Correo Corporativo</a>
         <a href="/diagnostico" class="btn btn-secondary">Hacer Diagnóstico Gratis</a>
       </div>
       <p class="muted small" style="margin-top: 16px;">@aconcagua.agency · Representación Colombia</p>
@@ -29,9 +29,14 @@
         const data = await apiJson(`/api/qr/${encodeURIComponent(slug)}`);
         document.getElementById("qr-title").textContent = data.qr.title;
         document.getElementById("qr-channel").textContent = `Canal: ${data.qr.channel_ref}`;
-        const btn = document.getElementById("qr-wa-btn");
-        btn.textContent = data.qr.cta_label || "Escribir por WhatsApp";
-        btn.href = data.whatsapp_url;
+        const btn = document.getElementById("qr-contact-btn");
+        if (data.whatsapp_url) {
+          btn.textContent = data.qr.cta_label || "Escribir por WhatsApp";
+          btn.href = data.whatsapp_url;
+        } else if (data.mailto_url) {
+          btn.textContent = "Escribir al Correo Corporativo";
+          btn.href = data.mailto_url;
+        }
       } catch (err) {
         console.error(err);
       }
